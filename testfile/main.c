@@ -4,6 +4,8 @@
 #include<stdbool.h>
 #include<math.h>
 
+#define LINE_LENTH 256      //每行最大长度
+
 int main(int argc, char *argv[])
 {
 
@@ -12,23 +14,31 @@ int main(int argc, char *argv[])
     bool orderloss=false; //缺省标志
     bool verbose=false;
 
+    FILE *fp_source,*fp_target;//文件指针
+    char line_data[LINE_LENTH];//读出的数据
+    int line_count=0;//行数
+
     printf("%d.\n",argc);
-    
     for (int j=0;j < argc;j++)
     {
         printf("%s.\n",argv[j]);
     }
+
+
+
 
 //处理接受的命令行参数
     int    i;
     if(argc < 2) //没有参数
     {
         printf("No arguments.\n");
-        exit(0);
+        //exit(0);
     }
-
-    for( i=1;i<argc;i++) 
+    else    //有参数,读取参数
     {
+     for( i=1;i<argc;i++) 
+      {
+        
         if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) 
         {
             help=true;
@@ -37,16 +47,84 @@ int main(int argc, char *argv[])
         {
             printf("错误指令\n");
             printf("你是说 --help 吗?\n");
-            orderloss=true;
+            help=false;
+        }
+        else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0) 
+        {
+            verbose=true;
+        }
+        else if (strcmp(argv[i], "--verbos") == 0 || strcmp(argv[i], "-veb") == 0|| strcmp(argv[i], "-vbe") == 0|| strcmp(argv[i], "-verb") == 0|| strcmp(argv[i], "--vetb") == 0|| strcmp(argv[i], "--vetbse") == 0)
+        {
+            printf("错误指令\n");
+            printf("你是说 --verbose 吗?\n");
+            verbose=false;
         }
         else 
         {
             error=true;
         }
 
-    }    
-
+     }    
+    }
 //根据不同的标志位，执行不同的操作
+
+    fp_source=fopen("file_test","r");
+    fp_target=fopen("file_test_out.mk","w");
+    if(fp_source==NULL)
+    {
+        fp_source=fopen("makefile","r");
+        if(fp_source==NULL)
+       { 
+        printf("Cannot open file.\n");
+        exit(0);
+       }
+    }
+    if(fp_target==NULL)
+    {
+        fp_target=fopen("Minimake_cleared.mk","w");
+        if(fp_target==NULL)
+        {
+        printf("Cannot open target file.\n");
+        exit(0);
+        }
+    } 
+
+        while(fgets(line_data,LINE_LENTH,fp_source)!=NULL)
+        {   
+            line_data[strcspn(line_data, "\n")] = 0; //去掉行尾换行符
+            if(strlen(line_data)==0) //过滤空行
+                continue;
+
+            char *comment_pos = strchr(line_data, '#'); //查找注释符号
+            if (comment_pos != NULL) {
+                *comment_pos = '\0'; //去除注释，将#及其后的内容设为字符串结束符
+            }
+
+            //去除行尾空格
+            int end = strlen(line_data) - 1;
+            while (end >= 0 && (line_data[end] == ' ' || line_data[end] == '\t')) {
+                line_data[end] = '\0';
+                end--;
+            }
+
+            if(strlen(line_data)==0) //去除注释后的空行
+                continue;
+            
+            line_count++;
+
+            //根据读到的数据进行不同的操作
+            printf("%d: %s\n",line_count,line_data);
+            if(verbose==true)
+            {
+                fputs(line_data,fp_target);//写入目标文件
+                fputs("\n",fp_target);//写入换行符
+            }
+        }
+        fclose(fp_source);
+        fclose(fp_target);
+
+
+
     if(error)
     {
         printf("没有这种指令\n");
@@ -55,6 +133,9 @@ int main(int argc, char *argv[])
     {
         printf("Help: This is a help message.\n");
     }
+    else if(verbose)
+    {
 
+    }
     return 0;
 }
