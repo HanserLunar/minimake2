@@ -3,7 +3,7 @@
 #include<string.h>
 #include<stdbool.h>
 #include<math.h>
-
+#include"readfile.h"
 #define LINE_LENTH 256      //每行最大长度
 
 int main(int argc, char *argv[])
@@ -68,7 +68,8 @@ int main(int argc, char *argv[])
     }
 //根据不同的标志位，执行不同的操作
 
-    fp_source=fopen("file_test","r");
+//预处理
+    fp_source=fopen("file_test_makefile","r");
     fp_target=fopen("file_test_out.mk","w");
     if(fp_source==NULL)
     {
@@ -88,8 +89,10 @@ int main(int argc, char *argv[])
         exit(0);
         }
     } 
+    int stage=1; //处理状态机 
+    char target[LINE_LENTH]; //目标文件名字
 
-        while(fgets(line_data,LINE_LENTH,fp_source)!=NULL)
+     while(fgets(line_data,LINE_LENTH,fp_source)!=NULL)
         {   
             line_data[strcspn(line_data, "\n")] = 0; //去掉行尾换行符
             if(strlen(line_data)==0) //过滤空行
@@ -114,6 +117,57 @@ int main(int argc, char *argv[])
 
             //根据读到的数据进行不同的操作
             printf("%d: %s\n",line_count,line_data);
+            switch(stage)
+            {
+                case 1:                 //读目标
+                    if(strcspn(line_data, ":")< strlen(line_data)) //找到了 :
+                    {
+                        strncpy(target, line_data, strcspn(line_data, ":"));
+                        target[strcspn(line_data, ":")] = '\0'; // 手动添加字符串结束符
+                        printf("Target: %s\n", target);
+                        stage=2; //进入读依赖状态
+                    }
+                    else if(line_data[0]=='\t')//没有找到 :,但找到\t
+                    {
+                        printf("Line%d:命令出现在规则前面\n",line_count);
+                        //处理错误情况
+                        exit(1);
+                    }
+                    else
+                    {
+                        printf("Line%d:没有冒号\n",line_count);
+                        //处理错误情况
+                        exit(1);
+                    }
+                    break;
+                case 2:                 //读依赖
+                    if(line_data[0]=='\t') //依赖行以制表符开头
+                    {
+                        printf("Dependency: %s\n", line_data);
+                        stage=3; //进入读命令状态
+                    }
+                    else if(strcspn(line_data, ":") < strlen(line_data)) //找到了下一个目标
+                    {
+                        stage=1; //重新进入读目标状态
+                        int s=strcspn(line_data, ":");
+                        strncpy(target, line_data, s);
+                        target[s] = '\0'; // 手动添加字符串结束符
+                        printf("Target: %s\n", target);
+                    }
+                    else
+                    {
+                        printf("Line%d:Expected a dependency line or a new target definition\n",line_count);
+                        //处理错误情况
+                        exit(1);
+                    }
+                    break;
+                case 3:                 //读命令
+                default:
+                    break;
+            }
+
+
+            //保存到目标文件
             if(verbose==true)
             {
                 fputs(line_data,fp_target);//写入目标文件
