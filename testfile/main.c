@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
 
     bool help=false;    //帮助标志
     bool error=false;   //错误标志
+    bool orderloss=false; //缺省标志
     bool verbose=false;
 
     printf("%d.\n",argc);
@@ -32,6 +33,12 @@ int main(int argc, char *argv[])
         {
             help=true;
         }
+        else if (strcmp(argv[i], "--hel") == 0 || strcmp(argv[i], "-hep") == 0|| strcmp(argv[i], "-hlp") == 0|| strcmp(argv[i], "-hel") == 0)
+        {
+            printf("错误指令\n");
+            printf("你是说 --help 吗?\n");
+            orderloss=true;
+        }
         else 
         {
             error=true;
@@ -42,15 +49,12 @@ int main(int argc, char *argv[])
 //根据不同的标志位，执行不同的操作
     if(error)
     {
-        printf("Error.\n");
-        exit(0);
+        printf("没有这种指令\n");
     }
     else if (help)
     {
         printf("Help: This is a help message.\n");
-        exit(0);
     }
-
 
     return 0;
 }
