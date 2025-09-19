@@ -5,6 +5,9 @@
 #include<math.h>
 #include<unistd.h>
 #include"readfile.h"
+#include<fcntl.h>
+#include<sys/types.h>
+#include<sys/stat.h>
 #define LINE_LENTH 256      //每行最大长度
 
 struct data_t{
@@ -15,21 +18,21 @@ struct data_t{
     int order_count; //命令个数
 }data[100]; 
 
-
-
 int data_count=0;//数据个数
 
 void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count);
 bool same_target_check(char* target, struct data_t data[], int data_count);
 bool file_exists(const char *filename);
 bool dependency_is_target_check(char* dependency, struct data_t data[], int data_count);
+int command_execute(char* command);
+
 int main(int argc, char *argv[])
 {
 
     bool help=false;    //帮助标志
     bool error=false;   //错误标志
     bool orderloss=false; //缺省标志
-    bool verbose=false;
+    bool verbose=false; //详细标志
 
     FILE *fp_source,*fp_target;//文件指针
     char line_data[LINE_LENTH];//读出的数据
@@ -98,7 +101,6 @@ int main(int argc, char *argv[])
     {
 
     }
-//根据不同的标志位，执行不同的操作
 
 //预处理
     fp_source=fopen("file_test_makefile","r");
@@ -130,6 +132,7 @@ int main(int argc, char *argv[])
   //  dependency[0]='\0';
   //  command[0]='\0';
 
+//读入数据
      while(fgets(line_data,LINE_LENTH,fp_source)!=NULL)
         {   
             line_data[strcspn(line_data, "\n")] = 0; //去掉行尾换行符
@@ -185,6 +188,7 @@ int main(int argc, char *argv[])
                         strcpy(dependency_list, line_data + s + 2); //复制依赖部分，跳过冒号和空格
                         printf("Dependency List: %s\n", dependency_list);
                         divide_dependencys(dependency_list, data[data_count].dependency, &data[data_count].dep_count);//分割依赖
+                       //检查依赖是否存在
                         for(int m=0;m < data[data_count].dep_count;m++)
                         {
                             if(file_exists(data[data_count].dependency[m])==false)
@@ -222,7 +226,7 @@ int main(int argc, char *argv[])
                         }
                         printf("Order: %s\n", line_data);
                         data[data_count].order_count++;
-                        strcpy(data[data_count].command[data[data_count].order_count-1], line_data);
+                        strcpy(data[data_count].command[data[data_count].order_count-1], line_data);//保存命令
 
                     }
                     else if(strcspn(line_data, ":") < strlen(line_data)) //找到了下一个目标
@@ -249,6 +253,7 @@ int main(int argc, char *argv[])
                         strcpy(dependency_list, line_data + s + 2); //复制依赖部分，跳过冒号和空格
                         printf("Dependency List: %s\n", dependency_list);
                         divide_dependencys(dependency_list, data[data_count].dependency, &data[data_count].dep_count);//分割依赖
+                        //检查依赖是否存在
                         for(int m=0;m < data[data_count].dep_count;m++)
                         {
                             if(file_exists(data[data_count].dependency[m])==false)
@@ -291,7 +296,35 @@ int main(int argc, char *argv[])
         }
 
 
+//执行命令
+        for(int i=1;i<data_count+1;i++)
+        {
+                if(data[i].order_count == 0)
+                {
+                    printf("错误：没有命令来构建目标%s\n", data[i].target);
+                    exit(1);
+                }
+                for(int k=0;k < data[i].order_count;k++)
+                {
+                    int ret = command_execute(data[i].command[k]);
+                    if(ret == -1)
+                    {
+                        printf("命令执行失败: %s\n", data[i].command[k]);
+                        exit(1);
+                    }
+                    else if(ret != 0)
+                    {
+                        printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
 
+                        //exit(1);
+                    }
+                }
+            
+  
+        }       
+      
+
+            
     return 0;
 }
 
@@ -357,4 +390,27 @@ bool dependency_is_target_check(char* dependency, struct data_t data[], int data
         }
     }
     return false;
+}
+
+//执行命令，返回值-1表示执行失败（调用sys失败或命令未正常退出），其他值表示命令调用sys成功且正常推出
+int command_execute(char* command)
+{
+    int status = system(command);
+    if (status == -1) {
+        // 处理 system 调用失败的情况
+        return -1;
+    } 
+    else 
+    {
+        // 获取命令的退出状态
+        if (WIFEXITED(status))
+        {
+            return WEXITSTATUS(status);
+        } 
+        else 
+        {
+            // 命令未正常退出
+            return -1;
+        }
+    }
 }
