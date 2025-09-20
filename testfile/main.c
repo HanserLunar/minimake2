@@ -25,7 +25,7 @@ struct data_t{
 
 
 struct graph{
-    char vexs[MAXVEX][MAXVEX];        //顶点表,每个顶点是一个字符串
+    char vexs[MAXVEX][MAXVEX];        //顶点表,每个顶点是一个字符
     int indegree[MAXVEX];//顶点的入度
     int outdegree[MAXVEX];//顶点的出度
     int arc[MAXVEX][MAXVEX];  //邻接矩阵
@@ -33,12 +33,17 @@ struct graph{
 };
 
 int data_count=0;//data个数
+int line[LINE_LENTH]={0};//存放入度为0的顶点的索引
+int line_count=0;   //入度为0的顶点的数目
+
 
 void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count);
 bool same_target_check(char* target, struct data_t data[], int data_count);
 bool file_exists(const char *filename);
 bool dependency_is_target_check(char* dependency, struct data_t data[], int data_count);
 int command_execute(char* command);
+bool Kahn(struct graph *G);
+void visit(struct graph*G ,int v);
 
 
 struct graph* createGraph();
@@ -418,6 +423,9 @@ int main(int argc, char *argv[])
             printf("顶点 %s 的出度: %d\n", G->vexs[i], G->outdegree[i]);
             printf("顶点 %s 的入度: %d\n", G->vexs[i], G->indegree[i]);
         }
+    printf("\n\n");
+    int s=Kahn(G);
+    printf("\n%d\n",s);
         //销毁图
     destroy_Graph(G);
     return 0;
@@ -605,15 +613,15 @@ void BFS(struct graph* G,int v)
 }
 
 
-//DFS 可以用递归实现
+//DFS 可以用递归实现                                
 void DFSs(struct graph* G,int v,bool visited[])
 {
     visited[v]=true;//访问标记，防止重复访问
-    printf("%s ",G->vexs[v]);
+    printf("asdAdasss:%s\n ",G->vexs[v]);
     //对该顶点进行特定的操作
     /* 例如：可以在这里对每个访问到的顶点进行计数或其他处理 */
     //这里可以添加对每个访问到的顶点的具体操作
-
+    visit(G,v);
     for(int i=0;i<G->numVertexes;i++)   //固定行，找列中为1的即是有边且未访问
     {
         if(G->arc[v][i]==1 && visited[i]==false)//搜索下一个顶点
@@ -621,4 +629,63 @@ void DFSs(struct graph* G,int v,bool visited[])
             DFSs(G,i,visited);
         }
     }
+}
+
+bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式有循环
+{
+    static int times=114;//最大递归次数
+    times--;
+    if(times<=0)
+        return false;
+
+    bool visited[LINE_LENTH];
+    bool flag=false;//标志这回合有没有可以减的入度，没有就返回！flag
+    memset(visited,false,sizeof(visited));
+    printf("Kahn\n");
+//    DFSs(G,3,visited);
+//    for(int i=0;i<line_count;i++)
+//       printf("%d\n",line[i]);
+    struct graph* GG=G; 
+    for(int i=0;i<GG->numVertexes;i++)//找入度为0的顶点
+    {
+        if(GG->indegree[i]==0)
+        {
+            line[line_count++]=i;
+            GG->indegree[i]=-1;
+            printf("line:%d\t",i);
+        }
+    }
+    printf("line_count:%d\n",line_count);
+
+    while((line_count)!=0)
+    {
+        for(int i=0;i<GG->numVertexes;i++)
+        {
+            if(GG->arc[line[(line_count)-1]][i]==1&&GG->indegree[i]>0)
+            {
+                flag=true;
+                GG->indegree[i]-=1;
+                printf("name:%s\nindegree:%d\n",GG->vexs[i],GG->indegree[i]); 
+            }
+        }
+        line_count--;
+    }
+    printf("I am here\n\n");
+
+    if(flag==false)
+        return !flag;
+    else Kahn(GG);
+}
+
+
+
+
+void visit(struct graph* G,int v)
+{
+    printf("reach visit\n");
+    if(G->indegree[v]==0)
+    {
+        line[line_count++]=v;//存储入度为0的顶点的索引
+    }
+    return;
 }
