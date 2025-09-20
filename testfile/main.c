@@ -8,15 +8,19 @@
 #include<fcntl.h>
 #include<sys/types.h>
 #include<sys/stat.h>
+#include "graph.h"
+
 #define LINE_LENTH 256      //每行最大长度
 
 struct data_t{
     char target[32]; //目标文件名字
     char dependency[LINE_LENTH][LINE_LENTH]; //依赖文件名字
-    char command[LINE_LENTH][LINE_LENTH]; //命令     
+    char command[LINE_LENTH][LINE_LENTH]; //命令 
+
     int dep_count; //依赖个数
     int order_count; //命令个数
 }data[100]; 
+ 
 
 int data_count=0;//数据个数
 
@@ -123,15 +127,7 @@ int main(int argc, char *argv[])
         exit(0);
         }
     } 
-    int stage=1; //处理状态机 
- //   char target[32]; //目标文件名字
- //   char dependency[LINE_LENTH]; //依赖文件名字
-  //  char command[LINE_LENTH]; //命令
-
-  //  target[0]='\0';//初始化为空字符串
-  //  dependency[0]='\0';
-  //  command[0]='\0';
-
+    int stage=1; //处理状态机 1-读目标 2-读命令
 //读入数据
      while(fgets(line_data,LINE_LENTH,fp_source)!=NULL)
         {   
@@ -315,12 +311,10 @@ int main(int argc, char *argv[])
                     else if(ret != 0)
                     {
                         printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
-
-                        //exit(1);
                     }
                 }
         }       
-      
+        
 
             
     return 0;
