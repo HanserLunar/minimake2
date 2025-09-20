@@ -425,7 +425,10 @@ int main(int argc, char *argv[])
         }
     printf("\n\n");
     int s=Kahn(G);
-    printf("\n%d\n",s);
+        if(!s)
+        {
+            printf("///////////////////\n这里面应该有个环\n//////////////////\n");
+        }
         //销毁图
     destroy_Graph(G);
     return 0;
@@ -633,10 +636,6 @@ void DFSs(struct graph* G,int v,bool visited[])
 
 bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式有循环
 {
-    static int times=114;//最大递归次数
-    times--;
-    if(times<=0)
-        return false;
 
     bool visited[LINE_LENTH];
     bool flag=false;//标志这回合有没有可以减的入度，没有就返回！flag
@@ -650,13 +649,13 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
     {
         if(GG->indegree[i]==0)
         {
+            printf("Kahn indegree=0:%s\n",GG->vexs[i]);
             line[line_count++]=i;
             GG->indegree[i]=-1;
-            printf("line:%d\t",i);
+            printf("line:%d\n",i);
         }
     }
-    printf("line_count:%d\n",line_count);
-
+    printf("line_count:%d\n\n",line_count);
     while((line_count)!=0)
     {
         for(int i=0;i<GG->numVertexes;i++)
@@ -665,7 +664,7 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
             {
                 flag=true;
                 GG->indegree[i]-=1;
-                printf("name:%s\nindegree:%d\n",GG->vexs[i],GG->indegree[i]); 
+                printf("name:%s\nindegree-1=%d\n",GG->vexs[i],GG->indegree[i]); 
             }
         }
         line_count--;
@@ -673,7 +672,17 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
     printf("I am here\n\n");
 
     if(flag==false)
-        return !flag;
+    {
+        for(int i=0;i<GG->numVertexes;i++)
+        {
+            printf("Kahn顶点 %s 的出度: %d\n", GG->vexs[i], GG->outdegree[i]);
+            printf("Kahn顶点 %s 的入度: %d\n", GG->vexs[i], GG->indegree[i]);
+        }            
+        for(int i=0;i<GG->numVertexes;i++) 
+            if(GG->indegree[i]!=-1)
+                return false;
+        return true;
+    }
     else Kahn(GG);
 }
 
