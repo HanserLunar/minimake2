@@ -1,3 +1,4 @@
-app: main.c utils.c utils.h
+app: utils.c main.c utils.h
 	gcc -o app main.c utils.c  # 编译命令
-
+main.c: utils.h
+ass: main.c

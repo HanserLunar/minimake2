@@ -1,4 +1,4 @@
-#include <stdbool.h>
+
 #ifndef graph_H
 #define graph_H
 

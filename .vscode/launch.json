@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/haly/minimake_myself/minimake",
-      "program": "/home/haly/minimake_myself/minimake/build/Debug/outDebug",
+      "cwd": "/home/haly/minimake_myself/testfile",
+      "program": "/home/haly/minimake_myself/testfile/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

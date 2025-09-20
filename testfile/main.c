@@ -8,21 +8,31 @@
 #include<fcntl.h>
 #include<sys/types.h>
 #include<sys/stat.h>
+
 #include "graph.h"
 
 #define LINE_LENTH 256      //每行最大长度
+#define MAXVEX 256
 
 struct data_t{
-    char target[32]; //目标文件名字
+    char target[LINE_LENTH]; //目标文件名字
     char dependency[LINE_LENTH][LINE_LENTH]; //依赖文件名字
     char command[LINE_LENTH][LINE_LENTH]; //命令 
 
     int dep_count; //依赖个数
     int order_count; //命令个数
 }data[100]; 
- 
 
-int data_count=0;//数据个数
+
+struct graph{
+    char vexs[MAXVEX][MAXVEX];        //顶点表,每个顶点是一个字符串
+    int indegree[MAXVEX];//顶点的入度
+    int outdegree[MAXVEX];//顶点的出度
+    int arc[MAXVEX][MAXVEX];  //邻接矩阵
+    int numVertexes,numEdges; //图中当前的顶点数和边数
+};
+
+int data_count=0;//data个数
 
 void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count);
 bool same_target_check(char* target, struct data_t data[], int data_count);
@@ -30,12 +40,22 @@ bool file_exists(const char *filename);
 bool dependency_is_target_check(char* dependency, struct data_t data[], int data_count);
 int command_execute(char* command);
 
+
+struct graph* createGraph();
+bool addEdge(struct graph* G,int src,int dest);
+bool addVertexs(struct graph* G,char* name);
+void destroy_Graph(struct graph* G);
+void BFS(struct graph* G,int value);
+void DFSs(struct graph* G,int v,bool visited[]);
+
+
+
 int main(int argc, char *argv[])
 {
 
     bool help=false;    //帮助标志
     bool error=false;   //错误标志
-    bool orderloss=false; //缺省标志
+    //bool orderloss=false; //缺省标志
     bool verbose=false; //详细标志
 
     FILE *fp_source,*fp_target;//文件指针
@@ -292,13 +312,75 @@ int main(int argc, char *argv[])
         }
 
 
-//执行命令
+        //构建图
+        struct graph* G=createGraph();
+        //添加目标和依赖为顶点        
+        bool exist=false;
+        bool found=false;
+        int src=-1;
+        int dest=-1;
+        for(int i=1;i<data_count+1;i++)
+        { 
+            found=false;
+            exist=false;
+
+            for(int j=0;j<G->numVertexes;j++)
+                {
+                    if(strncmp(data[i].target,G->vexs[j],LINE_LENTH)==0)
+                    {
+                        found=true;//该目标已经是顶点了
+                        dest=j;
+                        printf("dest:%d\n",dest);
+                        break;
+                    }
+                }
+                if(!found)
+                {            
+                    addVertexs(G,data[i].target);
+                    printf("grapss:%s\n",data[i].target);
+                    dest=G->numVertexes-1;
+                    printf("dest:%d\n",dest);
+                }                             
+            
+            for(int q=0;q<data[i].dep_count;q++)
+           {
+                
+                for(int j=0;j<G->numVertexes;j++)
+                {
+                    if(strncmp(data[i].dependency[q],G->vexs[j],LINE_LENTH)==0)
+                    {
+                        exist=true;//该依赖已经是顶点了
+                        src=j;
+                        addEdge(G,src,dest);
+                        printf("src:%d\n",src);
+                        break;
+                    }
+                }
+                if(!exist)
+                {   
+
+                    addVertexs(G,data[i].dependency[q]);
+                    printf("grapss:%s\n",data[i].dependency[q]);
+                    src=G->numVertexes-1;
+                    printf("src:%d\n",src);
+                    addEdge(G,src,dest);
+                }         
+           } 
+           
+        }
+        
+        
+        
+
+
+        //执行命令
+
         for(int i=1;i<data_count+1;i++)
         {
                 if(data[i].order_count == 0)
                 {
                     printf("错误：没有命令来构建目标%s\n", data[i].target);
-                    exit(1);
+                   // exit(1);
                 }
                 for(int k=0;k < data[i].order_count;k++)
                 {
@@ -316,7 +398,28 @@ int main(int argc, char *argv[])
         }       
         
 
-            
+
+
+    //打印图
+        printf("图的顶点数: %d\n", G->numVertexes);
+        printf("图的边数: %d\n", G->numEdges);
+        printf("图的邻接矩阵:\n");
+        for(int i=0;i<G->numVertexes;i++)
+        {
+            printf("顶点 %s  ", G->vexs[i]);
+            for(int j=0;j<G->numVertexes;j++)
+            {
+                printf("%d ",G->arc[i][j]);
+            }
+            printf("\n");
+        }
+        for(int i=0;i<G->numVertexes;i++)
+        {
+            printf("顶点 %s 的出度: %d\n", G->vexs[i], G->outdegree[i]);
+            printf("顶点 %s 的入度: %d\n", G->vexs[i], G->indegree[i]);
+        }
+        //销毁图
+    destroy_Graph(G);
     return 0;
 }
 
@@ -384,6 +487,9 @@ bool dependency_is_target_check(char* dependency, struct data_t data[], int data
     return false;
 }
 
+
+
+
 //执行命令，返回值-1表示执行失败（调用sys失败或命令未正常退出），其他值表示命令调用sys成功且正常推出
 int command_execute(char* command)
 {
@@ -403,6 +509,116 @@ int command_execute(char* command)
         {
             // 命令未正常退出
             return -1;
+        }
+    }
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//创建图
+struct graph* createGraph( )
+{
+
+    struct graph* G=(struct graph*)malloc(sizeof(struct graph));
+    G->numEdges=0;
+    G->numVertexes=0;
+    memset(G->indegree,0,sizeof(G->indegree));
+    memset(G->outdegree,0,sizeof(G->outdegree));
+    memset(G->vexs,0,sizeof(G->vexs));
+    for(int i=0;i<MAXVEX;i++)
+    {
+        for(int j=0;j<MAXVEX;j++)
+        {
+            G->arc[i][j]=0;
+        }
+    }
+    return G;
+}
+
+//添加边,我认为是有向图
+bool addEdge(struct graph* G,int src,int dest)//G->vex[src] -> G->vex[dest]
+{
+    if( src <0|| src >=G->numVertexes||dest<0||dest>=G->numVertexes)
+    {   
+        printf("graph.c:边的顶点值不合法\n");
+        return false;
+    }
+    G->arc[src][dest]=1;//没有权重
+    G->numEdges++;
+    G->outdegree[src]++;
+    G->indegree[dest]++;
+    return true;
+}
+
+//添加顶点
+bool addVertexs(struct graph* G,char*name)
+{
+    if(G->numVertexes>=MAXVEX)
+    {
+        printf("graph.c:顶点数达到上限\n");
+        return false;
+    }
+    strcpy(G->vexs[G->numVertexes],name);
+    G->numVertexes++;
+    return true;    
+}
+
+//销毁图
+void destroy_Graph(struct graph* G)
+{
+    free(G);
+}
+
+//BFS                   //出发顶点下标 graph->vexs[v]
+void BFS(struct graph* G,int v)
+{
+    bool visited[MAXVEX]; //访问标志
+    memset(visited,false,sizeof(visited));//初始化为未访问
+
+    visited[v]=true;
+    printf("%s ",G->vexs[v]);
+
+    int queue[MAXVEX];//队列，队列是指存放顶点下标的
+    int front=0,rear=0; //队头和队尾指针
+    queue[rear++]=v; //入队列
+    while(front!=rear) //队列不为空
+    {
+        int u=queue[front++]; //出队列
+        for(int i=0;i<G->numVertexes;i++)
+        {
+            if(G->arc[u][i]==1 && visited[i]==false) //固定行，找列中为1的即是有边且未访问
+            {
+                visited[i]=true;
+                printf("%s ",G->vexs[i]);
+                queue[rear++]=i; //把找到的未访问的顶点加入队列
+
+                //对该顶点进行特定的操作
+                /* 例如：可以在这里对每个访问到的顶点进行计数或其他处理 */
+                //这里可以添加对每个访问到的顶点的具体操作  
+            }
+        }
+        //之后从队列中取出下一个顶点u，继续上面的过程，直到队列为空
+    }
+    printf("\n");
+}
+
+
+//DFS 可以用递归实现
+void DFSs(struct graph* G,int v,bool visited[])
+{
+    visited[v]=true;//访问标记，防止重复访问
+    printf("%s ",G->vexs[v]);
+    //对该顶点进行特定的操作
+    /* 例如：可以在这里对每个访问到的顶点进行计数或其他处理 */
+    //这里可以添加对每个访问到的顶点的具体操作
+
+    for(int i=0;i<G->numVertexes;i++)   //固定行，找列中为1的即是有边且未访问
+    {
+        if(G->arc[v][i]==1 && visited[i]==false)//搜索下一个顶点
+        {
+            DFSs(G,i,visited);
         }
     }
 }
