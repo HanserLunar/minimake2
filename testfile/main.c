@@ -8,6 +8,7 @@
 #include<fcntl.h>
 #include<sys/types.h>
 #include<sys/stat.h>
+#include<time.h>
 
 #include "graph.h"
 
@@ -21,15 +22,17 @@ struct data_t{
 
     int dep_count; //依赖个数
     int order_count; //命令个数
+    bool construct_flag; //是否需要构建目标
 }data[100]; 
 
 
 struct graph{
-    char vexs[MAXVEX][MAXVEX];        //顶点表,每个顶点是一个字符
+    char vexs[MAXVEX][MAXVEX];        //顶点表,每个顶点是一串字符
     int indegree[MAXVEX];//顶点的入度
     int outdegree[MAXVEX];//顶点的出度
     int arc[MAXVEX][MAXVEX];  //邻接矩阵
     int numVertexes,numEdges; //图中当前的顶点数和边数
+    struct stat fileinfo[MAXVEX]; //存储每个顶点的文件信息
 };
 
 int data_count=0;//data个数
@@ -44,6 +47,8 @@ bool dependency_is_target_check(char* dependency, struct data_t data[], int data
 int command_execute(char* command);
 bool Kahn(struct graph *G);
 void visit(struct graph*G ,int v);
+void get_file_message(struct graph *GG);
+bool which_file_fresh(char* file_A,char* file_B);
 
 
 struct graph* createGraph();
@@ -277,11 +282,11 @@ int main(int argc, char *argv[])
                         //检查依赖是否存在
                         for(int m=0;m < data[data_count].dep_count;m++)
                         {
-                            if(file_exists(data[data_count].dependency[m])==false)
+                            if(file_exists(data[data_count].dependency[m])==false)//1不是某个已存在的文件
                             {
-                                if(dependency_is_target_check(data[data_count].dependency[m], data, data_count)==false)
+                                if(dependency_is_target_check(data[data_count].dependency[m], data, data_count)==false)//2也不是将要构造的文件
                                 {
-                                    printf("警告：Invalid dependency '%s'\n",data[data_count].dependency[m]);
+                                    printf("警告：Invalid dependency '%s'\n",data[data_count].dependency[m]);//3则该依赖不合法
                                     continue;
                                 }
                                 else    
@@ -320,10 +325,10 @@ int main(int argc, char *argv[])
         //构建图
         struct graph* G=createGraph();
         //添加目标和依赖为顶点        
-        bool exist=false;
-        bool found=false;
-        int src=-1;
-        int dest=-1;
+        bool exist=false;//该依赖是否已经作为顶点存在
+        bool found=false;//该目标是否已经作为顶点存在
+        int src=-1;//依赖索引
+        int dest=-1;//目标索引  src -> dest
         for(int i=1;i<data_count+1;i++)
         { 
             found=false;
@@ -373,35 +378,67 @@ int main(int argc, char *argv[])
            } 
            
         }
-        
-        
-        
-
-
-        //执行命令
-
+        //获取每个顶点的文件的时间戳，存入fileinfo数组
+        get_file_message(G);
+        printf("///\n///\n///\n");
         for(int i=1;i<data_count+1;i++)
         {
-                if(data[i].order_count == 0)
+            if(file_exists(data[i].target))
+            {
+                printf("HI\n");
+                for(int j=0;j<data[i].dep_count;j++)
                 {
+                    if(which_file_fresh(data[i].target , data[i].dependency[j])==false)//前者比后者新则返回真，反之假
+                    {
+                        printf("I arrived here\n");
+                        data[i].construct_flag=true;//依赖有更新的，需要重新构建目标
+                    }
+                }
+            }
+            else
+            {
+                printf("NO,I am here\n");
+                data[i].construct_flag=true;
+                for(int j=0;j<data[i].dep_count;j++)
+                {
+                    if(!file_exists(data[i].dependency[j]))
+                    {
+                        printf("警告：Invalid dependency '%s'\n",data[i].dependency[j]);
+                        data[i].construct_flag=false;
+                        break;
+                    }
+                }
+                
+            }
+        }
+
+     //执行命令    
+        for(int i=1;i<data_count+1;i++)
+        {
+   
+            if(data[i].order_count == 0)
+            {
                     printf("错误：没有命令来构建目标%s\n", data[i].target);
                    // exit(1);
-                }
-                for(int k=0;k < data[i].order_count;k++)
+            }
+            if(data[i].construct_flag==false)//没有必要更新
+                continue;            
+            for(int k=0;k < data[i].order_count;k++)
+            {
+                int ret = command_execute(data[i].command[k]);
+                if(ret == -1)
                 {
-                    int ret = command_execute(data[i].command[k]);
-                    if(ret == -1)
-                    {
                         printf("命令执行失败: %s\n", data[i].command[k]);
                         exit(1);
-                    }
-                    else if(ret != 0)
-                    {
-                        printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
-                    }
                 }
+                else if(ret != 0)
+                {
+                        printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
+                }
+            }
         }       
         
+
 
 
 
@@ -427,7 +464,7 @@ int main(int argc, char *argv[])
     int s=Kahn(G);
         if(!s)
         {
-            printf("///////////////////\n这里面应该有个环\n//////////////////\n");
+            printf("////////////////////////////////////////////////////////////////////\n\t\t\t这里面应该有个环\n////////////////////////////////////////////////////////////////////\n");
         }
         //销毁图
     destroy_Graph(G);
@@ -697,4 +734,33 @@ void visit(struct graph* G,int v)
         line[line_count++]=v;//存储入度为0的顶点的索引
     }
     return;
+}
+
+//获取顶点的文件信息
+void get_file_message(struct graph *GG)
+{
+    for(int i=0;i<GG->numVertexes;i++)
+    {
+        printf("\ngetfile:I am here\n");
+        if(stat(GG->vexs[i],&GG->fileinfo[i])!=0)
+            continue;
+            // 转换时间戳为可读格式
+        
+         printf("文件: %s\n", GG->vexs[i]);
+         printf("最后访问时间: %s", ctime(&GG->fileinfo[i].st_atime));
+         printf("最后修改时间: %s", ctime(&GG->fileinfo[i].st_mtime));
+         printf("最后状态变更时间: %s", ctime(&GG->fileinfo[i].st_ctime));
+    }
+    printf("\n\n");
+
+}
+
+//比较两个文件修改时间，看哪个比较新
+bool which_file_fresh(char* file_A,char* file_B)//A比B新，返回真，反之假，一样新也是假
+{
+    struct stat A,B;
+    if(stat(file_A,&A)!=0)  printf("which_file_fresh:文件 %s 打开失败\n",file_A);
+    if(stat(file_B,&B)!=0)  printf("WHICH_FILE_FRESH:文件 %s 打开失败\n",file_B);
+    
+    return A.st_mtime > B.st_mtime;
 }

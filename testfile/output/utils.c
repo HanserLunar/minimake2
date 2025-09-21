@@ -3,6 +3,6 @@
 
 void utils()
 {
-    printf("This is a utility function.\n");
+    printf("This is a utility function...\n");
     return; 
 }
