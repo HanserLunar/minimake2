@@ -587,7 +587,7 @@ int command_execute(char* command)
     if(pid==0)
     {
         printf("command_execute:子程序运行中...\n");
-        execvp("gcc",div_com);
+        execvp("/bin/sh",div_com);
 
         printf("command_execute:子程序错误\n");
         return -1;
