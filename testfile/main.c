@@ -9,7 +9,7 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<time.h>
-
+#include<wait.h>
 #include "graph.h"
 
 #define LINE_LENTH 256      //每行最大长度
@@ -570,19 +570,27 @@ int command_execute(char* command)
 {
     printf("command execute:命令是：%s\n",command);
 
-    //预处理，把整行命令拆成小块
-    char divided_command[LINE_LENTH][LINE_LENTH];
+    //预处理，把整行命令拆成小块，用/bin/sh则不需要分割
+    //char divided_command[LINE_LENTH][LINE_LENTH];
+    //char *div_com[LINE_LENTH];
+    //memset(div_com,NULL,sizeof(div_com));
+
+    //int num=0;
+    //divide_command(command,divided_command,&num);
+
+    //for(int i=0;i<num;i++)
+    //{
+    //    div_com[i]=divided_command[i];
+    //    printf("ssss:%s\n",div_com[i]);
+    //}
+    //div_com[num]=NULL;
     char *div_com[LINE_LENTH];
-    memset(div_com,NULL,sizeof(div_com));
-    int num=0;
-    divide_command(command,divided_command,&num);
-    for(int i=0;i<num;i++)
-    {
-        div_com[i]=divided_command[i];
-        printf("ssss:%s\n",div_com[i]);
-    }
-    div_com[num]=NULL;
-    
+    div_com[0]="sh";
+    div_com[1]="-c";
+    div_com[2]=command;
+    div_com[3]=NULL;
+    for(int i=0;i<4;i++)
+        printf("dddd:%s\n",div_com[i]);
     pid_t pid=fork();       //创建子进程
     if(pid==0)
     {
