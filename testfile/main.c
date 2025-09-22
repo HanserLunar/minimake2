@@ -41,6 +41,7 @@ int line_count=0;   //入度为0的顶点的数目
 
 
 void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count);
+void divide_command(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count);
 bool same_target_check(char* target, struct data_t data[], int data_count);
 bool file_exists(const char *filename);
 bool dependency_is_target_check(char* dependency, struct data_t data[], int data_count);
@@ -425,6 +426,7 @@ int main(int argc, char *argv[])
                 continue;            
             for(int k=0;k < data[i].order_count;k++)
             {
+                printf("重构了\n");
                 int ret = command_execute(data[i].command[k]);
                 if(ret == -1)
                 {
@@ -475,7 +477,7 @@ int main(int argc, char *argv[])
 
 
 
-//输入是依赖串   输出是一个个分离的依赖
+//输入是依赖串   输出是一个个分离的依赖                                                         //输出有多少个依赖
 void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count)
 {
     int s=strcspn(dependency_list, " ");
@@ -502,7 +504,32 @@ void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LIN
     }
     return ;
 }
-
+void divide_command(char* dependency_list, char dependencies[LINE_LENTH][LINE_LENTH], int* dep_count)
+{
+    int s=strcspn(dependency_list, " ");
+    if(s < strlen(dependency_list)) //找到了空格
+    {
+        strncpy(dependencies[*dep_count], dependency_list, s);
+        dependencies[*dep_count][s] = '\0'; // 手动添加字符串结束符
+        printf("Command1: %s\n", dependencies[*dep_count]);
+        (*dep_count)++;
+        divide_command(dependency_list + s + 1, dependencies, dep_count);
+        return ; //递归处理剩余部分
+    }
+    else if(strlen(dependency_list) > 0) //没有找到空格，但还有剩余部分
+    {
+        strncpy(dependencies[*dep_count], dependency_list, strlen(dependency_list));
+        dependencies[*dep_count][strlen(dependency_list)] = '\0'; // 手动添加字符串结束符
+        printf("Command2: %s\n", dependencies[*dep_count]);
+        (*dep_count)++;
+        return; //处理完毕
+    }
+    else
+    {
+        return ; //没有更多依赖
+    }
+    return ;
+}
 
 //检查目标是否重复
 bool same_target_check(char* target, struct data_t data[], int data_count)
@@ -541,8 +568,65 @@ bool dependency_is_target_check(char* dependency, struct data_t data[], int data
 //执行命令，返回值-1表示执行失败（调用sys失败或命令未正常退出），其他值表示命令调用sys成功且正常推出
 int command_execute(char* command)
 {
+    printf("command execute:命令是：%s\n",command);
+
+    //预处理，把整行命令拆成小块
+    char divided_command[LINE_LENTH][LINE_LENTH];
+    char *div_com[LINE_LENTH];
+    memset(div_com,NULL,sizeof(div_com));
+    int num=0;
+    divide_command(command,divided_command,&num);
+    for(int i=0;i<num;i++)
+    {
+        div_com[i]=divided_command[i];
+        printf("ssss:%s\n",div_com[i]);
+    }
+    div_com[num]=NULL;
+    
+    pid_t pid=fork();       //创建子进程
+    if(pid==0)
+    {
+        printf("command_execute:子程序运行中...\n");
+        execvp("gcc",div_com);
+
+        printf("command_execute:子程序错误\n");
+        return -1;
+        exit(1);
+    }
+    else
+    {
+        int status=0;
+        pid_t result;
+        result=waitpid(pid,&status,0);
+        if(result==-1)
+        {
+            printf("command execute:子程序执行失败\n");
+        }
+        else if(result==0)
+        {   
+            printf("command execute:子程序进行中\n");
+        }
+        else
+        {
+            printf("command execute:子程序结束\n");
+            if (WIFEXITED(status)) 
+            {
+                printf("命令执行完成，退出状态: %d\n", WEXITSTATUS(status));
+                return 1;
+            } 
+            else 
+            {
+                printf("命令异常终止\n");
+                return -1;
+            }
+        }   
+    }
+
+}
+/*   
     int status = system(command);
-    if (status == -1) {
+    if (status == -1) 
+    {
         // 处理 system 调用失败的情况
         return -1;
     } 
@@ -561,7 +645,7 @@ int command_execute(char* command)
     }
 
 }
-
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -764,3 +848,4 @@ bool which_file_fresh(char* file_A,char* file_B)//A比B新，返回真，反之�
     
     return A.st_mtime > B.st_mtime;
 }
+
