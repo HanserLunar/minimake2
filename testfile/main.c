@@ -16,17 +16,19 @@
 #define MAXVEX 256
 #define TABLE_SIZE 256
 
+// 哈希表的大小
+#define TABLE_SIZE 256
 typedef struct Hash_n //哈希节点 结构体
 {
     char *key;  //键名
-    int value;//键值
+    char* value;//键值,本项目里应该是字符串
     struct Hash_n *next; //指向下一个节点
 };
 
 struct Hash_t
 {
     struct Hash_n *list[TABLE_SIZE];//存放链表头？并不是按顺序存的
-}hash_table;
+};
 
 /*                              节点1                                 节点2          
     hash_table.list   |  hash10{ key=?   value=? }  |       -> hash11{ key=?   value=? }
@@ -35,6 +37,7 @@ struct Hash_t
                         .....   
 
 */
+
 
 
 struct data_t{
@@ -82,13 +85,13 @@ void BFS(struct graph* G,int value);
 void DFSs(struct graph* G,int v,bool visited[]);
 
 
-struct Hash_n * create_hash(char* key,int value);
+struct Hash_n * create_hash(char* key,char *value);
 unsigned int hash_func(char* key);
 struct Hash_t*init_hash();
 void destroy_hashtable(struct Hash_t* table);
-bool add_hash_n(struct Hash_t*table,char*key,int value);
+bool add_hash_n(struct Hash_t*table,char*key,char *value);
 bool destroy_hash_n(struct Hash_t * table,char *key);
-int look_up_value(struct Hash_t *table,char * key);
+char* look_up_value(struct Hash_t *table,char * key);
 
 
 
@@ -103,8 +106,15 @@ int main(int argc, char *argv[])
     bool verbose=false; //详细标志
 
     FILE *fp_source,*fp_target;//文件指针
-    char line_data[LINE_LENTH];//读出的数据
+    char line_data[LINE_LENTH];//从文件读出的数据
     int line_count=0;//行数
+
+    struct Hash_t *hash_table=init_hash();
+    if(hash_table==NULL)
+    {
+        exit(1);
+    }
+
 
     printf("%d.\n",argc);
     for (int j=0;j < argc;j++)
@@ -201,7 +211,7 @@ int main(int argc, char *argv[])
 
             char *comment_pos = strchr(line_data, '#'); //查找注释符号
             if (comment_pos != NULL) {
-                *comment_pos = '\0'; //去除注释，将#及其后的内容设为字符串结束符
+                *comment_pos = '\0'; //去除注释，将#设为字符串结束符,其后的内容忽略
             }
 
             //去除行尾空格
@@ -216,8 +226,45 @@ int main(int argc, char *argv[])
             
             line_count++;
 
+
+            
             //根据读到的数据进行不同的操作
-            printf("%d: %s\n",line_count,line_data);
+            printf("\n%d: %s\n",line_count,line_data);
+
+
+            
+            //读变量，找“=”号，=号左边是key，右边是value，
+            //一行定义多个变量，可以用；分割，但我这里不考虑，默认一行一个变量
+            ////目前这里默认等号左右都有一个空格（可优化）////
+            if(strcspn(line_data,"=") < strlen(line_data))
+            {  
+                int temp=strcspn(line_data," ");
+                char key[LINE_LENTH]={'\0'};
+                char value[LINE_LENTH]={'\0'};
+                strncpy(key,line_data,temp);
+                key[temp]='\0';
+                line_data[temp]='=';
+                temp=strcspn(line_data," ");
+                int i;
+                for(i=temp+1;i<strlen(line_data);i++)
+                {
+                    value[i-temp-1]=line_data[i];
+                }
+                value[i]='\0';
+                printf("key=%s,value=%s\n",key,value);
+
+                //定义的变量导入哈希表
+                if(add_hash_n(hash_table,key,value)==false)
+                {
+                    printf("插入哈希表失败！\nkey=%s value=%s\n",key,value);
+                }
+                printf("key=%s对应的value=%s\n",key,look_up_value(hash_table,key));
+                continue;
+            }
+            
+
+
+            //读目标和命令，目标和命令是存储在一起的   data[i]
             switch(stage)
             {
                 case 1:                 //读目标
@@ -352,7 +399,7 @@ int main(int argc, char *argv[])
         fclose(fp_target);
         for(int i=1;i<data_count+1;i++)
         {
-            printf("第%d个\ndep_count=%d\norder_count=%d\n\n",i,data[i].dep_count,data[i].order_count);
+            printf("第%d个data\ndep_count=%d\norder_count=%d\n\n",i,data[i].dep_count,data[i].order_count);
         }
 
 
@@ -503,6 +550,7 @@ int main(int argc, char *argv[])
         }
         //销毁图
     destroy_Graph(G);
+    destroy_hashtable(hash_table);
     return 0;
 }
 
@@ -892,10 +940,8 @@ bool which_file_fresh(char* file_A,char* file_B)//A比B新，返回真，反之�
 
 
 
-
-
 //创建哈希节点                  
-struct Hash_n* create_hash(char* key,int value)
+struct Hash_n* create_hash(char* key,char* value)
 {
     struct Hash_n* newone=(struct Hash_n*)malloc(sizeof(struct Hash_n));
     if(newone==NULL)
@@ -912,7 +958,7 @@ struct Hash_n* create_hash(char* key,int value)
         printf("Hash.c:复制键名失败\n");
         return NULL;
     }
-    newone->value=value;
+    newone->value=strdup(value);
     newone->next=NULL;
     return newone;
 }
@@ -961,6 +1007,7 @@ void destroy_hashtable(struct Hash_t* table)
             struct Hash_n* temp=current;
             current=current->next;
             free(temp->key);
+            free(temp->value);
             free(temp);
         }
     }
@@ -968,7 +1015,7 @@ void destroy_hashtable(struct Hash_t* table)
 }
 
 //创建哈希节点并加入节点链表
-bool add_hash_n(struct Hash_t*table,char*key,int value)
+bool add_hash_n(struct Hash_t*table,char*key,char* value)
 {
     unsigned int index=hash_func(key);
     struct Hash_n*temp=table->list[index];
@@ -977,7 +1024,7 @@ bool add_hash_n(struct Hash_t*table,char*key,int value)
     {
         if(strcmp(temp->key,key)==0)//找到已经定义过的键名，仅修改键值
         {    
-            temp->value=value;
+           temp->value=strdup(value);
             return true;
         }
         temp=temp->next;
@@ -1020,7 +1067,7 @@ bool destroy_hash_n(struct Hash_t * table,char *key)
 
 
 //查找键对应的数值
-int look_up_value(struct Hash_t *table,char * key)
+char* look_up_value(struct Hash_t *table,char * key)
 {
     unsigned int index=hash_func(key);
     struct Hash_n* temp=table->list[index];
