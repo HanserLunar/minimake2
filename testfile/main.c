@@ -75,7 +75,7 @@ bool Kahn(struct graph *G);
 void visit(struct graph*G ,int v);
 void get_file_message(struct graph *GG);
 bool which_file_fresh(char* file_A,char* file_B);
-
+char *unfold_variety(struct Hash_t* hash_tables,char* command);
 
 struct graph* createGraph();
 bool addEdge(struct graph* G,int src,int dest);
@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
                 if(!found)
                 {            
                     addVertexs(G,data[i].target);
-                    printf("grapss:%s\n",data[i].target);
+                    printf("图grapss:%s\n",data[i].target);
                     dest=G->numVertexes-1;
                     printf("dest:%d\n",dest);
                 }                             
@@ -451,7 +451,7 @@ int main(int argc, char *argv[])
                 {   
 
                     addVertexs(G,data[i].dependency[q]);
-                    printf("grapss:%s\n",data[i].dependency[q]);
+                    printf("图grapss:%s\n",data[i].dependency[q]);
                     src=G->numVertexes-1;
                     printf("src:%d\n",src);
                     addEdge(G,src,dest);
@@ -507,7 +507,10 @@ int main(int argc, char *argv[])
             for(int k=0;k < data[i].order_count;k++)
             {
                 printf("重构了\n");
-                int ret = command_execute(data[i].command[k]);
+                //执行命令前完成变量展开
+                char* command=unfold_variety(hash_table,data[i].command[k]);
+
+                int ret = command_execute(command);
                 if(ret == -1)
                 {
                         printf("命令执行失败: %s\n", data[i].command[k]);
@@ -937,6 +940,59 @@ bool which_file_fresh(char* file_A,char* file_B)//A比B新，返回真，反之�
     
     return A.st_mtime > B.st_mtime;
 }
+
+//遍历变量，将${sss}或$()结构的部分找出并替换
+char* unfold_variety(struct Hash_t* hash_tables,char* command)
+{
+    printf("进入unfold_variety\n");
+    size_t temp=strcspn(command,"$");
+    char tail[LINE_LENTH]={'\0'};
+    char cmd[LINE_LENTH]={'\0'};
+    char key[LINE_LENTH]={'\0'};
+    bool boo=true; //默认是$（）结构
+    char* value;
+    int i;
+    if(temp <strlen(command))//找到了
+    {
+        printf("找到了\n");
+        strncpy(cmd,command,temp);//把&前的复制一下
+        if(command[temp+1]-'{'==0)
+        {
+            boo=false;
+        }
+        if(boo)
+        {
+            printf("找另一半括号)\n");
+            for(i=temp+1+1;i<strcspn(command,")");i++)
+            {
+                key[i-temp-2]=command[i];
+            }
+        }
+        else
+        {
+            printf("找另一半括号}\n");
+            for(i=temp+2;i<strcspn(command,"}");i++)
+            {
+                key[i-temp-2]=command[i];
+            }
+        } 
+        for(int j=++i;i<strlen(command);i++)//把剩余的部分保存下来
+        {
+            tail[i-j]=command[i];
+        }
+        key[i-temp-2]='\0';
+        printf("unfold_variety:key=%s\n",key);
+        value=look_up_value(hash_tables,key);
+        printf("unfold_variety:value=%s\n",value);
+        strcat(cmd,value);
+        strcat(cmd,tail);
+        printf("unfold_variety:处理结果：%s\n",cmd);
+        strcpy(command,unfold_variety(hash_tables,cmd));
+    }
+    //没找到或处理完了
+    return command;
+}
+
 
 
 

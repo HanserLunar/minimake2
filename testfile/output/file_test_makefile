@@ -3,5 +3,5 @@ CFLAGS = -Wall -O2
 TARGET = myprogram
 SOURCES = main.c utils.c
 app: utils.c main.c utils.h
-	gcc -o app main.c utils.c  # 编译命令
+	$(CC) -o app $(SOURCES)  # 编译命令
 
