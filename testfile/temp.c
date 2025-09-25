@@ -1,3 +1,4 @@
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -97,7 +98,7 @@ char* look_up_value(struct Hash_t *table,char * key);
 
 
 
-int main(int argc, char *argv[])
+int mains(int argc, char *argv[])
 {
 
     bool help=false;    //帮助标志
@@ -116,11 +117,69 @@ int main(int argc, char *argv[])
     }
 
 
-    //printf("%d.\n",argc);
-    //for (int j=0;j < argc;j++)
-   // {
-   //     printf("%s.\n",argv[j]);
-    //}
+    printf("%d.\n",argc);
+    for (int j=0;j < argc;j++)
+    {
+        printf("%s.\n",argv[j]);
+    }
+
+
+
+
+//处理接受的命令行参数
+    int    i;
+    if(argc < 2) //没有参数
+    {
+        printf("No arguments.\n");
+        //exit(0);
+    }
+    else    //有参数,读取参数
+    {
+     for( i=1;i<argc;i++) 
+      {
+        
+        if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) 
+        {
+            help=true;
+        }
+        else if (strcmp(argv[i], "--hel") == 0 || strcmp(argv[i], "-hep") == 0|| strcmp(argv[i], "-hlp") == 0|| strcmp(argv[i], "-hel") == 0)
+        {
+            printf("错误指令\n");
+            printf("你是说 --help 吗?\n");
+            help=false;
+        }
+        else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0) 
+        {
+            verbose=true;
+        }
+        else if (strcmp(argv[i], "--verbos") == 0 || strcmp(argv[i], "-veb") == 0|| strcmp(argv[i], "-vbe") == 0|| strcmp(argv[i], "-verb") == 0|| strcmp(argv[i], "--vetb") == 0|| strcmp(argv[i], "--vetbse") == 0)
+        {
+            printf("错误指令\n");
+            printf("你是说 --verbose 吗?\n");
+            verbose=false;
+        }
+        else 
+        {
+            error=true;
+        }
+
+     }    
+    }
+
+        if(error)
+    {
+        printf("没有这种指令,无效\n");
+        exit(0);
+    }
+    else if (help)
+    {
+        printf("Help: This is a Usage message.\n");
+        exit(0);
+    }
+    else if(verbose)
+    {
+
+    }
 
 //预处理
     fp_source=fopen("Makefile","r");
@@ -162,20 +221,16 @@ int main(int argc, char *argv[])
                 line_data[end] = '\0';
                 end--;
             }
-            
+
             if(strlen(line_data)==0) //去除注释后的空行
                 continue;
+            
             line_count++;
-//保存到目标文件
-            //if(verbose==true)
-            {
-                fputs(line_data,fp_target);//写入目标文件
-                fputs("\n",fp_target);//写入换行符
-            }
+
 
             
             //根据读到的数据进行不同的操作
-            //printf("\n%d: %s\n",line_count,line_data);
+            printf("\n%d: %s\n",line_count,line_data);
 
             char* checked_linedata=unfold_variety(hash_table,line_data);//读一行拆一行，感觉最为高效
             strcpy(line_data,checked_linedata);
@@ -203,14 +258,14 @@ int main(int argc, char *argv[])
 
                 value[i]='\0';
                 value2=unfold_variety(hash_table,value);//若等号右边有$，展开它
-                //printf("key=%s,value=%s\n",key,value2);
+                printf("key=%s,value=%s\n",key,value2);
 
                 //定义的变量导入哈希表
                 if(add_hash_n(hash_table,key,value2)==false)
                 {
-                    //printf("插入哈希表失败！\nkey=%s value=%s\n",key,value2);
+                    printf("插入哈希表失败！\nkey=%s value=%s\n",key,value2);
                 }
-                //printf("key=%s对应的value=%s\n",key,look_up_value(hash_table,key));
+                printf("key=%s对应的value=%s\n",key,look_up_value(hash_table,key));
                 continue;
             }
             
@@ -233,23 +288,19 @@ int main(int argc, char *argv[])
                         if(same_target_check(temp, data, data_count)==true)
                         {
                             //处理错误情况
-                            fprintf(stderr,"Duplicate target definition '%s'\n",temp);
+                            printf("错误：目标重复定义\n");
                             exit(1);
                         }
                         strcpy(data[data_count].target, temp);
 
-                        //printf("Targetsss: %s\n", data[data_count].target);
+                        printf("Targetsss: %s\n", data[data_count].target);
 
                         //提取依赖
                         int s=strcspn(line_data, ":");
                         char dependency_list[LINE_LENTH];
                         dependency_list[0]='\0';
-                        if(line_data[s+1]==' ')
-                        {
-                            strcpy(dependency_list, line_data + s + 2); //复制依赖部分，跳过冒号和空格
-                        }
-                        else strcpy(dependency_list, line_data + s + 1); //复制依赖部分，跳过冒号和空格
-                        //printf("Dependency List: %s\n", dependency_list);
+                        strcpy(dependency_list, line_data + s + 2); //复制依赖部分，跳过冒号和空格
+                        printf("Dependency List: %s\n", dependency_list);
                         divide_dependencys(dependency_list, data[data_count].dependency, &data[data_count].dep_count);//分割依赖
                        //检查依赖是否存在
                         for(int m=0;m < data[data_count].dep_count;m++)
@@ -258,8 +309,7 @@ int main(int argc, char *argv[])
                             {
                                 if(dependency_is_target_check(data[data_count].dependency[m], data, data_count)==false)
                                 {
-                                    fprintf(stderr,"Invalid dependency '%s'\n",data[data_count].dependency[m]);
-                                    exit(1);
+                                    printf("警告：Invalid dependency '%s'\n",data[data_count].dependency[m]);
                                     continue;
                                 }
                                 else    
@@ -270,14 +320,13 @@ int main(int argc, char *argv[])
                     }
                     else if(line_data[0]=='\t')//没有找到 :,但找到\t
                     {
-                        fprintf(stderr,"Line%d: Command found before rule\n",line_count);//命令前没有对应目标
-                        exit(1);
+                        printf("Line%d: Command found before rule\n",line_count);//命令前没有对应目标
                         //处理错误情况
                         //exit(1);
                     }
                     else
                     {
-                        fprintf(stderr,"Line%d: Missing colon in target definition\n",line_count);//没有冒号
+                        printf("Line%d: Missing colon in target definition\n",line_count);//没有冒号
                         //处理错误情况
                         exit(1);
                     }
@@ -289,7 +338,7 @@ int main(int argc, char *argv[])
                         {
                             line_data[k]=line_data[k+1]; //去掉制表符
                         }
-                        //printf("Order: %s\n", line_data);
+                        printf("Order: %s\n", line_data);
                         data[data_count].order_count++;
                         strcpy(data[data_count].command[data[data_count].order_count-1], line_data);//保存命令
 
@@ -305,7 +354,7 @@ int main(int argc, char *argv[])
                         if(same_target_check(temp, data, data_count)==true)
                         {
                             //处理错误情况
-                            fprintf(stderr,"Duplicate target definition '%s'\n",temp);
+                            printf("Duplicate target definition '%s'\n",temp);
                             exit(1);
                         }
                         strcpy(data[data_count].target, temp);
@@ -316,7 +365,7 @@ int main(int argc, char *argv[])
                         char dependency_list[LINE_LENTH];
                         dependency_list[0]='\0';
                         strcpy(dependency_list, line_data + s + 2); //复制依赖部分，跳过冒号和空格
-                        //printf("Dependency List: %s\n", dependency_list);
+                        printf("Dependency List: %s\n", dependency_list);
                         divide_dependencys(dependency_list, data[data_count].dependency, &data[data_count].dep_count);//分割依赖
                         //检查依赖是否存在
                         for(int m=0;m < data[data_count].dep_count;m++)
@@ -325,8 +374,7 @@ int main(int argc, char *argv[])
                             {
                                 if(dependency_is_target_check(data[data_count].dependency[m], data, data_count)==false)//2也不是将要构造的文件
                                 {
-                                    fprintf(stderr,"Invalid dependency '%s'\n",data[data_count].dependency[m]);//3则该依赖不合法
-                                    exit(1);
+                                    printf("Invalid dependency '%s'\n",data[data_count].dependency[m]);//3则该依赖不合法
                                     continue;
                                 }
                                 else    
@@ -337,7 +385,7 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
-                        fprintf(stderr,"Line%d: Missing colon in target definition\n",line_count);//没有TAB起头
+                        printf("Line%d: Missing colon in target definition\n",line_count);//没有TAB起头
                         //处理错误情况
                         exit(1);
                     }
@@ -347,10 +395,20 @@ int main(int argc, char *argv[])
             }
 
 
-            
+            //保存到目标文件
+            if(verbose==true)
+            {
+                fputs(line_data,fp_target);//写入目标文件
+                fputs("\n",fp_target);//写入换行符
+            }
         }
         fclose(fp_source);
         fclose(fp_target);
+        for(int i=1;i<data_count+1;i++)
+        {
+            printf("第%d个data\ndep_count=%d\norder_count=%d\n\n",i,data[i].dep_count,data[i].order_count);
+        }
+
 
         //构建图
         struct graph* G=createGraph();
@@ -370,16 +428,16 @@ int main(int argc, char *argv[])
                     {
                         found=true;//该目标已经是顶点了
                         dest=j;
-                        //printf("dest:%d\n",dest);
+                        printf("dest:%d\n",dest);
                         break;
                     }
                 }
                 if(!found)
                 {            
                     addVertexs(G,data[i].target);
-                    //printf("图grapss:%s\n",data[i].target);
+                    printf("图grapss:%s\n",data[i].target);
                     dest=G->numVertexes-1;
-                    //printf("dest:%d\n",dest);
+                    printf("dest:%d\n",dest);
                 }                             
             
             for(int q=0;q<data[i].dep_count;q++)
@@ -392,7 +450,7 @@ int main(int argc, char *argv[])
                         exist=true;//该依赖已经是顶点了
                         src=j;
                         addEdge(G,src,dest);
-                        //printf("src:%d\n",src);
+                        printf("src:%d\n",src);
                         break;
                     }
                 }
@@ -400,9 +458,9 @@ int main(int argc, char *argv[])
                 {   
 
                     addVertexs(G,data[i].dependency[q]);
-                    //printf("图grapss:%s\n",data[i].dependency[q]);
+                    printf("图grapss:%s\n",data[i].dependency[q]);
                     src=G->numVertexes-1;
-                    //printf("src:%d\n",src);
+                    printf("src:%d\n",src);
                     addEdge(G,src,dest);
                 }         
            } 
@@ -410,30 +468,30 @@ int main(int argc, char *argv[])
         }
         //获取每个顶点的文件的时间戳，存入fileinfo数组
         get_file_message(G);
-        //printf("///\n///\n///\n");
+        printf("///\n///\n///\n");
         for(int i=1;i<data_count+1;i++)
         {
             if(file_exists(data[i].target))
             {
-                //printf("HI\n");
+                printf("HI\n");
                 for(int j=0;j<data[i].dep_count;j++)
                 {
                     if(which_file_fresh(data[i].target , data[i].dependency[j])==false)//前者比后者新则返回真，反之假
                     {
-                        //printf("I arrived here\n");
+                        printf("I arrived here\n");
                         data[i].construct_flag=true;//依赖有更新的，需要重新构建目标
                     }
                 }
             }
             else
             {
-                //printf("NO,I am here\n");
+                printf("NO,I am here\n");
                 data[i].construct_flag=true;
                 for(int j=0;j<data[i].dep_count;j++)
                 {
                     if(!file_exists(data[i].dependency[j]))
                     {
-                        //printf("Invalid dependency '%s'\n",data[i].dependency[j]);
+                        printf("Invalid dependency '%s'\n",data[i].dependency[j]);
                         data[i].construct_flag=false;
                         break;
                     }
@@ -442,102 +500,64 @@ int main(int argc, char *argv[])
             }
         }
 
-
-    //处理接受的命令行参数
-    int    i;
-    if(argc < 2) //没有参数
-    {
-        //printf("No arguments.\n");
-        //exit(0);
-    }
-    else    //有参数,读取参数
-    {
-        for( i=1;i<argc;i++) 
-        {
-        
-            if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) 
-            {
-                help=true;
-            }
-            else if (strcmp(argv[i], "--hel") == 0 || strcmp(argv[i], "-hep") == 0|| strcmp(argv[i], "-hlp") == 0|| strcmp(argv[i], "-hel") == 0)
-            {
-                printf("错误指令\n");
-                printf("你是说 --help 吗?\n");
-                help=false;
-            }
-            else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0) 
-            {
-                verbose=true;
-            }
-            else if (strcmp(argv[i], "--verbos") == 0 || strcmp(argv[i], "-veb") == 0|| strcmp(argv[i], "-vbe") == 0|| strcmp(argv[i], "-verb") == 0|| strcmp(argv[i], "--vetb") == 0|| strcmp(argv[i], "--vetbse") == 0)
-            {
-                printf("错误指令\n");
-                printf("你是说 --verbose 吗?\n");
-                verbose=false;
-            }
-            else
-            {
-                error=true;//默认用户输错了，再去目标里找找
-                for(int j=1;j<data_count+1;j++)
-                {
-                    if(strcmp(argv[i],data[j].target)==0)//用户点名某目标
-                    {
-                        data[j].construct_flag=true;//说明该目标需要构建一下
-                        error=false;//在目标里发现参数，说明没错，按用户的意思来
-                        break;
-                    }
-                }
-            }
-        }    
-    }
-
      //执行命令    
         for(int i=1;i<data_count+1;i++)
         {
    
             if(data[i].order_count == 0)
             {
-                    //printf("错误：没有命令来构建目标%s\n", data[i].target);
+                    printf("错误：没有命令来构建目标%s\n", data[i].target);
                    // exit(1);
             }
             if(data[i].construct_flag==false)//没有必要更新
                 continue;            
             for(int k=0;k < data[i].order_count;k++)
             {
-                //printf("重构了\n");
+                printf("重构了\n");
                 //执行命令前完成变量展开
                 char* command=unfold_variety(hash_table,data[i].command[k]);
 
                 int ret = command_execute(command);
                 if(ret == -1)
                 {
-                       // printf("命令执行失败: %s\n", data[i].command[k]);
+                        printf("命令执行失败: %s\n", data[i].command[k]);
                         exit(1);
                 }
                 else if(ret != 0)
                 {
-                
-                        //printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
+                        printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
                 }
             }
-        }  
+        }       
         
-    
-      
 
-    if(error)
-    {
-        fprintf(stderr,"没有这种指令,无效\n");
-        exit(1);
-    }
-    else if (help)
-    {
-        printf("Usage: minimake [options] [targets...]\n\nOptions:\n  -h, --help  Show help\n");
-        exit(0);
-    }
+
+
 
     //打印图
+        printf("图的顶点数: %d\n", G->numVertexes);
+        printf("图的边数: %d\n", G->numEdges);
+        printf("图的邻接矩阵:\n");
+        for(int i=0;i<G->numVertexes;i++)
+        {
+            printf("顶点 %s  ", G->vexs[i]);
+            for(int j=0;j<G->numVertexes;j++)
+            {
+                printf("%d ",G->arc[i][j]);
+            }
+            printf("\n");
+        }
+        for(int i=0;i<G->numVertexes;i++)
+        {
+            printf("顶点 %s 的出度: %d\n", G->vexs[i], G->outdegree[i]);
+            printf("顶点 %s 的入度: %d\n", G->vexs[i], G->indegree[i]);
+        }
+    printf("\n\n");
     int s=Kahn(G);
+        if(!s)
+        {
+            printf("////////////////////////////////////////////////////////////////////\n\t\t\t这里面应该有个环\n////////////////////////////////////////////////////////////////////\n");
+        }
         //销毁图
     destroy_Graph(G);
     destroy_hashtable(hash_table);
@@ -556,7 +576,7 @@ void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LIN
     {
         strncpy(dependencies[*dep_count], dependency_list, s);
         dependencies[*dep_count][s] = '\0'; // 手动添加字符串结束符
-        //printf("Dependency: %s\n", dependencies[*dep_count]);
+        printf("Dependency: %s\n", dependencies[*dep_count]);
         (*dep_count)++;
         divide_dependencys(dependency_list + s + 1, dependencies, dep_count);
         return ; //递归处理剩余部分
@@ -565,7 +585,7 @@ void divide_dependencys(char* dependency_list, char dependencies[LINE_LENTH][LIN
     {
         strncpy(dependencies[*dep_count], dependency_list, strlen(dependency_list));
         dependencies[*dep_count][strlen(dependency_list)] = '\0'; // 手动添加字符串结束符
-        //printf("Dependency: %s\n", dependencies[*dep_count]);
+        printf("Dependency: %s\n", dependencies[*dep_count]);
         (*dep_count)++;
         return; //处理完毕
     }
@@ -582,7 +602,7 @@ void divide_command(char* dependency_list, char dependencies[LINE_LENTH][LINE_LE
     {
         strncpy(dependencies[*dep_count], dependency_list, s);
         dependencies[*dep_count][s] = '\0'; // 手动添加字符串结束符
-        //printf("Command1: %s\n", dependencies[*dep_count]);
+        printf("Command1: %s\n", dependencies[*dep_count]);
         (*dep_count)++;
         divide_command(dependency_list + s + 1, dependencies, dep_count);
         return ; //递归处理剩余部分
@@ -591,7 +611,7 @@ void divide_command(char* dependency_list, char dependencies[LINE_LENTH][LINE_LE
     {
         strncpy(dependencies[*dep_count], dependency_list, strlen(dependency_list));
         dependencies[*dep_count][strlen(dependency_list)] = '\0'; // 手动添加字符串结束符
-        //printf("Command2: %s\n", dependencies[*dep_count]);
+        printf("Command2: %s\n", dependencies[*dep_count]);
         (*dep_count)++;
         return; //处理完毕
     }
@@ -639,7 +659,7 @@ bool dependency_is_target_check(char* dependency, struct data_t data[], int data
 //执行命令，返回值-1表示执行失败（调用sys失败或命令未正常退出），其他值表示命令调用sys成功且正常推出
 int command_execute(char* command)
 {
-    //printf("command execute:命令是：%s\n",command);
+    printf("command execute:命令是：%s\n",command);
 
     //预处理，把整行命令拆成小块，用/bin/sh则不需要分割
     //char divided_command[LINE_LENTH][LINE_LENTH];
@@ -660,13 +680,15 @@ int command_execute(char* command)
     div_com[1]="-c";
     div_com[2]=command;
     div_com[3]=NULL;
+    for(int i=0;i<4;i++)
+        printf("dddd:%s\n",div_com[i]);
     pid_t pid=fork();       //创建子进程
     if(pid==0)
     {
-        //printf("command_execute:子程序运行中...\n");
+        printf("command_execute:子程序运行中...\n");
         execvp("/bin/sh",div_com);
 
-        //printf("command_execute:子程序错误\n");
+        printf("command_execute:子程序错误\n");
         return -1;
         exit(1);
     }
@@ -677,23 +699,23 @@ int command_execute(char* command)
         result=waitpid(pid,&status,0);
         if(result==-1)
         {
-            //printf("command execute:子程序执行失败\n");
+            printf("command execute:子程序执行失败\n");
         }
         else if(result==0)
         {   
-            //printf("command execute:子程序进行中\n");
+            printf("command execute:子程序进行中\n");
         }
         else
         {
-            //printf("command execute:子程序结束\n");
+            printf("command execute:子程序结束\n");
             if (WIFEXITED(status)) 
             {
-                //printf("命令执行完成，退出状态: %d\n", WEXITSTATUS(status));
+                printf("命令执行完成，退出状态: %d\n", WEXITSTATUS(status));
                 return 1;
             } 
             else 
             {
-                //printf("命令异常终止\n");
+                printf("命令异常终止\n");
                 return -1;
             }
         }   
@@ -751,7 +773,7 @@ bool addEdge(struct graph* G,int src,int dest)//G->vex[src] -> G->vex[dest]
 {
     if( src <0|| src >=G->numVertexes||dest<0||dest>=G->numVertexes)
     {   
-        //printf("graph.c:边的顶点值不合法\n");
+        printf("graph.c:边的顶点值不合法\n");
         return false;
     }
     G->arc[src][dest]=1;//没有权重
@@ -766,7 +788,7 @@ bool addVertexs(struct graph* G,char*name)
 {
     if(G->numVertexes>=MAXVEX)
     {
-        //printf("graph.c:顶点数达到上限\n");
+        printf("graph.c:顶点数达到上限\n");
         return false;
     }
     strcpy(G->vexs[G->numVertexes],name);
@@ -787,7 +809,7 @@ void BFS(struct graph* G,int v)
     memset(visited,false,sizeof(visited));//初始化为未访问
 
     visited[v]=true;
-    //printf("%s ",G->vexs[v]);
+    printf("%s ",G->vexs[v]);
 
     int queue[MAXVEX];//队列，队列是指存放顶点下标的
     int front=0,rear=0; //队头和队尾指针
@@ -800,7 +822,7 @@ void BFS(struct graph* G,int v)
             if(G->arc[u][i]==1 && visited[i]==false) //固定行，找列中为1的即是有边且未访问
             {
                 visited[i]=true;
-                //printf("%s ",G->vexs[i]);
+                printf("%s ",G->vexs[i]);
                 queue[rear++]=i; //把找到的未访问的顶点加入队列
 
                 //对该顶点进行特定的操作
@@ -810,7 +832,7 @@ void BFS(struct graph* G,int v)
         }
         //之后从队列中取出下一个顶点u，继续上面的过程，直到队列为空
     }
-    //printf("\n");
+    printf("\n");
 }
 
 
@@ -838,7 +860,7 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
     bool visited[LINE_LENTH];
     bool flag=false;//标志这回合有没有可以减的入度，没有就返回！flag
     memset(visited,false,sizeof(visited));
-    //printf("Kahn\n");
+    printf("Kahn\n");
 //    DFSs(G,3,visited);
 //    for(int i=0;i<line_count;i++)
 //       printf("%d\n",line[i]);
@@ -847,13 +869,13 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
     {
         if(GG->indegree[i]==0)
         {
-            //printf("Kahn indegree=0:%s\n",GG->vexs[i]);
+            printf("Kahn indegree=0:%s\n",GG->vexs[i]);
             line[line_count++]=i;
             GG->indegree[i]=-1;
-            //printf("line:%d\n",i);
+            printf("line:%d\n",i);
         }
     }
-    //printf("line_count:%d\n\n",line_count);
+    printf("line_count:%d\n\n",line_count);
     while((line_count)!=0)
     {
         for(int i=0;i<GG->numVertexes;i++)
@@ -862,19 +884,19 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
             {
                 flag=true;
                 GG->indegree[i]-=1;
-                //printf("name:%s\nindegree-1=%d\n",GG->vexs[i],GG->indegree[i]); 
+                printf("name:%s\nindegree-1=%d\n",GG->vexs[i],GG->indegree[i]); 
             }
         }
         line_count--;
     }
-    //printf("I am here\n\n");
+    printf("I am here\n\n");
 
     if(flag==false)
     {
         for(int i=0;i<GG->numVertexes;i++)
         {
-            //printf("Kahn顶点 %s 的出度: %d\n", GG->vexs[i], GG->outdegree[i]);
-            //printf("Kahn顶点 %s 的入度: %d\n", GG->vexs[i], GG->indegree[i]);
+            printf("Kahn顶点 %s 的出度: %d\n", GG->vexs[i], GG->outdegree[i]);
+            printf("Kahn顶点 %s 的入度: %d\n", GG->vexs[i], GG->indegree[i]);
         }            
         for(int i=0;i<GG->numVertexes;i++) 
             if(GG->indegree[i]!=-1)
@@ -889,7 +911,7 @@ bool Kahn(struct graph*G) //返回true表示没有循环结构,返回false表式
 
 void visit(struct graph* G,int v)
 {
-    //printf("reach visit\n");
+    printf("reach visit\n");
     if(G->indegree[v]==0)
     {
         line[line_count++]=v;//存储入度为0的顶点的索引
@@ -902,17 +924,17 @@ void get_file_message(struct graph *GG)
 {
     for(int i=0;i<GG->numVertexes;i++)
     {
-        //printf("\ngetfile:I am here\n");
+        printf("\ngetfile:I am here\n");
         if(stat(GG->vexs[i],&GG->fileinfo[i])!=0)
             continue;
             // 转换时间戳为可读格式
         
-         //printf("文件: %s\n", GG->vexs[i]);
-         //printf("最后访问时间: %s", ctime(&GG->fileinfo[i].st_atime));
-         //printf("最后修改时间: %s", ctime(&GG->fileinfo[i].st_mtime));
-         //printf("最后状态变更时间: %s", ctime(&GG->fileinfo[i].st_ctime));
+         printf("文件: %s\n", GG->vexs[i]);
+         printf("最后访问时间: %s", ctime(&GG->fileinfo[i].st_atime));
+         printf("最后修改时间: %s", ctime(&GG->fileinfo[i].st_mtime));
+         printf("最后状态变更时间: %s", ctime(&GG->fileinfo[i].st_ctime));
     }
-    //printf("\n\n");
+    printf("\n\n");
 
 }
 
@@ -920,8 +942,8 @@ void get_file_message(struct graph *GG)
 bool which_file_fresh(char* file_A,char* file_B)//A比B新，返回真，反之假，一样新也是假
 {
     struct stat A,B;
-    if(stat(file_A,&A)!=0)  //printf("which_file_fresh:文件 %s 打开失败\n",file_A);
-    if(stat(file_B,&B)!=0)  //printf("WHICH_FILE_FRESH:文件 %s 打开失败\n",file_B);
+    if(stat(file_A,&A)!=0)  printf("which_file_fresh:文件 %s 打开失败\n",file_A);
+    if(stat(file_B,&B)!=0)  printf("WHICH_FILE_FRESH:文件 %s 打开失败\n",file_B);
     
     return A.st_mtime > B.st_mtime;
 }
@@ -929,7 +951,7 @@ bool which_file_fresh(char* file_A,char* file_B)//A比B新，返回真，反之�
 //遍历变量，将${sss}或$()结构的部分找出并替换
 char* unfold_variety(struct Hash_t* hash_tables,char* command)
 {
-    //printf("进入unfold_variety\n");
+    printf("进入unfold_variety\n");
     size_t temp=strcspn(command,"$");
     char tail[LINE_LENTH]={'\0'};
     char cmd[LINE_LENTH]={'\0'};
@@ -939,7 +961,7 @@ char* unfold_variety(struct Hash_t* hash_tables,char* command)
     int i;
     if(temp <strlen(command))//找到了
     {
-        //printf("找到了\n");
+        printf("找到了\n");
         strncpy(cmd,command,temp);//把&前的复制一下
         if(command[temp+1]-'{'==0)
         {
@@ -947,7 +969,7 @@ char* unfold_variety(struct Hash_t* hash_tables,char* command)
         }
         if(boo)
         {
-            //printf("找另一半括号)\n");
+            printf("找另一半括号)\n");
             for(i=temp+1+1;i<strcspn(command,")");i++)
             {
                 key[i-temp-2]=command[i];
@@ -955,7 +977,7 @@ char* unfold_variety(struct Hash_t* hash_tables,char* command)
         }
         else
         {
-            //printf("找另一半括号}\n");
+            printf("找另一半括号}\n");
             for(i=temp+2;i<strcspn(command,"}");i++)
             {
                 key[i-temp-2]=command[i];
@@ -966,12 +988,12 @@ char* unfold_variety(struct Hash_t* hash_tables,char* command)
             tail[i-j]=command[i];
         }
         key[i-temp-2]='\0';
-        //printf("unfold_variety:key=%s\n",key);
+        printf("unfold_variety:key=%s\n",key);
         value=look_up_value(hash_tables,key);
-        //printf("unfold_variety:value=%s\n",value);
+        printf("unfold_variety:value=%s\n",value);
         strcat(cmd,value);
         strcat(cmd,tail);
-        //printf("unfold_variety:处理结果：%s\n",cmd);
+        printf("unfold_variety:处理结果：%s\n",cmd);
         strcpy(command,unfold_variety(hash_tables,cmd));
     }
     //没找到或处理完了
@@ -987,7 +1009,7 @@ struct Hash_n* create_hash(char* key,char* value)
     struct Hash_n* newone=(struct Hash_n*)malloc(sizeof(struct Hash_n));
     if(newone==NULL)
         {
-            //printf("Hash.c:创建新节点失败\n");
+            printf("Hash.c:创建新节点失败\n");
             return NULL;
         }
 
@@ -996,7 +1018,7 @@ struct Hash_n* create_hash(char* key,char* value)
     if(newone->key==NULL)
     {
         free(newone);
-       // printf("Hash.c:复制键名失败\n");
+        printf("Hash.c:复制键名失败\n");
         return NULL;
     }
     newone->value=strdup(value);
@@ -1027,7 +1049,7 @@ struct Hash_t*init_hash()
     struct Hash_t* table=(struct Hash_t *)malloc(sizeof(struct Hash_t));
     if(table==NULL)
     {
-       //printf("hash.c:初始化哈希表失败\n");
+        printf("hash.c:初始化哈希表失败\n");
         return table;
     }
     for(int i=0;i<TABLE_SIZE;i++)
@@ -1121,7 +1143,7 @@ char* look_up_value(struct Hash_t *table,char * key)
         }
         temp=temp->next;
     }
-    //printf("hash.c:没找到键值key=%s的键值\n",key);
+    printf("hash.c:没找到键值key=%s的键值\n",key);
     return "";
 }
-
+*/
