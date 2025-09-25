@@ -76,6 +76,9 @@ void visit(struct graph*G ,int v);
 void get_file_message(struct graph *GG);
 bool which_file_fresh(char* file_A,char* file_B);
 char *unfold_variety(struct Hash_t* hash_tables,char* command);
+int target_update(struct data_t data,struct Hash_t* hash_table);
+
+
 
 struct graph* createGraph();
 bool addEdge(struct graph* G,int src,int dest);
@@ -351,20 +354,20 @@ int main(int argc, char *argv[])
         }
         fclose(fp_source);
         fclose(fp_target);
-
+        
         //构建图
         struct graph* G=createGraph();
-        //添加目标和依赖为顶点        
-        bool exist=false;//该依赖是否已经作为顶点存在
-        bool found=false;//该目标是否已经作为顶点存在
-        int src=-1;//依赖索引
-        int dest=-1;//目标索引  src -> dest
-        for(int i=1;i<data_count+1;i++)
-        { 
-            found=false;
-            exist=false;
+            //添加目标和依赖为顶点        
+            bool exist=false;//该依赖是否已经作为顶点存在
+            bool found=false;//该目标是否已经作为顶点存在
+            int src=-1;//依赖索引
+            int dest=-1;//目标索引  src -> dest
+            for(int i=1;i<data_count+1;i++)
+            { 
+                found=false;
+                exist=false;
 
-            for(int j=0;j<G->numVertexes;j++)
+                for(int j=0;j<G->numVertexes;j++)
                 {
                     if(strncmp(data[i].target,G->vexs[j],LINE_LENTH)==0)
                     {
@@ -382,32 +385,37 @@ int main(int argc, char *argv[])
                     //printf("dest:%d\n",dest);
                 }                             
             
-            for(int q=0;q<data[i].dep_count;q++)
-           {
-                
-                for(int j=0;j<G->numVertexes;j++)
+                for(int q=0;q<data[i].dep_count;q++)
                 {
-                    if(strncmp(data[i].dependency[q],G->vexs[j],LINE_LENTH)==0)
+                
+                    for(int j=0;j<G->numVertexes;j++)
                     {
-                        exist=true;//该依赖已经是顶点了
-                        src=j;
-                        addEdge(G,src,dest);
-                        //printf("src:%d\n",src);
-                        break;
+                        if(strncmp(data[i].dependency[q],G->vexs[j],LINE_LENTH)==0)
+                        {
+                            exist=true;//该依赖已经是顶点了
+                            src=j;
+                            addEdge(G,src,dest);
+                            //printf("src:%d\n",src);
+                            break;
+                        }
                     }
-                }
-                if(!exist)
-                {   
+                    if(!exist)
+                    {   
 
-                    addVertexs(G,data[i].dependency[q]);
-                    //printf("图grapss:%s\n",data[i].dependency[q]);
-                    src=G->numVertexes-1;
-                    //printf("src:%d\n",src);
-                    addEdge(G,src,dest);
-                }         
-           } 
+                        addVertexs(G,data[i].dependency[q]);
+                        //printf("图grapss:%s\n",data[i].dependency[q]);
+                        src=G->numVertexes-1;
+                        //printf("src:%d\n",src);
+                        addEdge(G,src,dest);
+                    }         
+                } 
            
-        }
+            }
+            
+        
+        
+       
+        
         //获取每个顶点的文件的时间戳，存入fileinfo数组
         get_file_message(G);
         //printf("///\n///\n///\n");
@@ -494,32 +502,15 @@ int main(int argc, char *argv[])
      //执行命令    
         for(int i=1;i<data_count+1;i++)
         {
-   
             if(data[i].order_count == 0)
             {
                     //printf("错误：没有命令来构建目标%s\n", data[i].target);
                    // exit(1);
             }
             if(data[i].construct_flag==false)//没有必要更新
-                continue;            
-            for(int k=0;k < data[i].order_count;k++)
-            {
-                //printf("重构了\n");
-                //执行命令前完成变量展开
-                char* command=unfold_variety(hash_table,data[i].command[k]);
-
-                int ret = command_execute(command);
-                if(ret == -1)
-                {
-                       // printf("命令执行失败: %s\n", data[i].command[k]);
-                        exit(1);
-                }
-                else if(ret != 0)
-                {
-                
-                        //printf("命令正常退出 (%d): %s\n", ret, data[i].command[k]);
-                }
-            }
+                continue;  
+            //有必要更新
+            int s=target_update(data[i],hash_table);          
         }  
         
     
@@ -536,7 +527,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    //打印图
+    //kahn算法
     int s=Kahn(G);
         //销毁图
     destroy_Graph(G);
@@ -544,7 +535,66 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-
+int target_update(struct data_t data,struct Hash_t* hash_table)
+{
+    printf("well?\n");
+    pid_t pids[7]={0};//最多七个子进程
+    pid_t temp=0;
+    int j=0;//0-7
+    bool full=false;//满载标志
+    for(int k=0;k < data.order_count;k++)
+    {
+        printf("j=%d\n",j);
+        if(j==7||full)//满载时等一个进程结束才能加一个进去
+        {
+            printf("full\n");
+            j=0;
+            temp=wait(NULL);//保存刚才结束的进程的pid
+            full=true;
+        }
+        pid_t pid=fork();   
+        //执行命令前完成变量展开
+        if(pid<0)
+        {
+            printf("target_update:创建子进程失败\n");
+        }
+        else if(pid==0)
+        {
+          char* command=unfold_variety(hash_table,data.command[k]);
+            int ret = command_execute(command);
+            exit(ret==-1?1:0);  
+        }
+        else 
+        {
+            if(full)//满载了，找出刚才结束的进程
+            {
+                for(int l=0;l<7;l++)
+                {
+                    if(pids[l]==temp)
+                    {
+                        printf("刚刚结束了进程，pid是%d,索引是%d\n",temp,l);
+                        pids[l]=pid;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                printf("here\n");
+                pids[j]=pid;
+                j++;
+            }
+            
+            continue;
+        } 
+    }
+    //统一结束进程
+    for(int m=0;m<7;m++)
+    {
+        printf("\npid=%d,index=%d\n",pids[m],m);
+        waitpid(pids[m], NULL, 0);
+    }
+}
 
 
 
