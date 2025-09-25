@@ -1,6 +1,7 @@
 CC = gcc
+CFLAGS = sss
 CFLAGS = -Wall -O2
-TARGET = myprogram
+TARGET = $(my)
 SOURCES = main.c utils.c
 app: utils.c main.c utils.h
 	$(CC) -o app $(SOURCES)  # 编译命令

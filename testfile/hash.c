@@ -173,6 +173,6 @@ char* look_up_value(struct Hash_t *table,char * key)
         }
         temp=temp->next;
     }
-    printf("hash.c:没找到键值\n");
-    return 0;
+    printf("hash.c:没找到键值key=%s的键值\n",key);
+    return NULL;
 }

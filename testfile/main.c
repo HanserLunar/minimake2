@@ -231,32 +231,38 @@ int main(int argc, char *argv[])
             //根据读到的数据进行不同的操作
             printf("\n%d: %s\n",line_count,line_data);
 
+            char* checked_linedata=unfold_variety(hash_table,line_data);//读一行拆一行，感觉最为高效
+            strcpy(line_data,checked_linedata);
 
             
             //读变量，找“=”号，=号左边是key，右边是value，
             //一行定义多个变量，可以用；分割，但我这里不考虑，默认一行一个变量
             ////目前这里默认等号左右都有一个空格（可优化）////
-            if(strcspn(line_data,"=") < strlen(line_data))
+            int equal;
+            if((equal=strcspn(line_data,"=")) < strlen(line_data))
             {  
-                int temp=strcspn(line_data," ");
+                int temp=equal-1;//等号左边的空格的索引
                 char key[LINE_LENTH]={'\0'};
                 char value[LINE_LENTH]={'\0'};
-                strncpy(key,line_data,temp);
+                char* value2;
+                strncpy(key,line_data,temp);//把等号左边保存为key
                 key[temp]='\0';
-                line_data[temp]='=';
-                temp=strcspn(line_data," ");
+                line_data[temp]='=';//删掉这个空格
+                temp=equal+1;//变成等号右边空格的索引
                 int i;
                 for(i=temp+1;i<strlen(line_data);i++)
                 {
-                    value[i-temp-1]=line_data[i];
+                    value[i-temp-1]=line_data[i];//保存等号右边的为value
                 }
+
                 value[i]='\0';
-                printf("key=%s,value=%s\n",key,value);
+                value2=unfold_variety(hash_table,value);//若等号右边有$，展开它
+                printf("key=%s,value=%s\n",key,value2);
 
                 //定义的变量导入哈希表
-                if(add_hash_n(hash_table,key,value)==false)
+                if(add_hash_n(hash_table,key,value2)==false)
                 {
-                    printf("插入哈希表失败！\nkey=%s value=%s\n",key,value);
+                    printf("插入哈希表失败！\nkey=%s value=%s\n",key,value2);
                 }
                 printf("key=%s对应的value=%s\n",key,look_up_value(hash_table,key));
                 continue;
@@ -1136,6 +1142,6 @@ char* look_up_value(struct Hash_t *table,char * key)
         }
         temp=temp->next;
     }
-    printf("hash.c:没找到键值\n");
-    return 0;
+    printf("hash.c:没找到键值key=%s的键值\n",key);
+    return "";
 }
