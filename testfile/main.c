@@ -562,6 +562,7 @@ int target_update(struct data_t data,struct Hash_t* hash_table)
         {
           char* command=unfold_variety(hash_table,data.command[k]);
             int ret = command_execute(command);
+            //free(command);
             exit(ret==-1?1:0);  
         }
         else 
@@ -578,7 +579,7 @@ int target_update(struct data_t data,struct Hash_t* hash_table)
                     }
                 }
             }
-            else
+            else//没满载，依次填充
             {
                 printf("here\n");
                 pids[j]=pid;
@@ -715,7 +716,7 @@ int command_execute(char* command)
     {
         //printf("command_execute:子程序运行中...\n");
         execvp("/bin/sh",div_com);
-
+        free(div_com);
         //printf("command_execute:子程序错误\n");
         return -1;
         exit(1);
