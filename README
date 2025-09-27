@@ -1,0 +1,2 @@
+testfile 中有源代码
+另外值得注意的是VSCODE似乎不太支持多文件编译，因此我把hash.c和graph.c的代码直接放到main.c，方便调试
