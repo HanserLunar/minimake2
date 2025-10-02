@@ -10,7 +10,8 @@
 #include<sys/stat.h>
 #include<time.h>
 #include<wait.h>
-#include "graph.h"
+#include"graph.h"
+
 
 #define LINE_LENTH 256      //每行最大长度
 #define MAXVEX 256
@@ -18,7 +19,7 @@
 
 // 哈希表的大小
 #define TABLE_SIZE 256
-typedef struct Hash_n //哈希节点 结构体
+struct Hash_n //哈希节点 结构体
 {
     char *key;  //键名
     char* value;//键值,本项目里应该是字符串
@@ -367,6 +368,7 @@ int main(int argc, char *argv[])
                 found=false;
                 exist=false;
 
+                //检查目标是否已经为顶点
                 for(int j=0;j<G->numVertexes;j++)
                 {
                     if(strncmp(data[i].target,G->vexs[j],LINE_LENTH)==0)
@@ -377,14 +379,14 @@ int main(int argc, char *argv[])
                         break;
                     }
                 }
-                if(!found)
+                if(!found)//不是顶点
                 {            
                     addVertexs(G,data[i].target);
                     //printf("图grapss:%s\n",data[i].target);
                     dest=G->numVertexes-1;
                     //printf("dest:%d\n",dest);
                 }                             
-            
+                
                 for(int q=0;q<data[i].dep_count;q++)
                 {
                 
@@ -421,7 +423,7 @@ int main(int argc, char *argv[])
         //printf("///\n///\n///\n");
         for(int i=1;i<data_count+1;i++)
         {
-            if(file_exists(data[i].target))
+            if(file_exists(data[i].target))//文件存在，比较时间
             {
                 //printf("HI\n");
                 for(int j=0;j<data[i].dep_count;j++)
@@ -433,11 +435,11 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            else
+            else//文件不存在，直接构造
             {
                 //printf("NO,I am here\n");
-                data[i].construct_flag=true;
-                for(int j=0;j<data[i].dep_count;j++)
+                data[i].construct_flag=true;//应该要构造，以防依赖不存在的情况，继续下面的查看依赖
+                for(int j=0;j<data[i].dep_count;j++)//看看依赖中是否有不存在的，若有则按上一阶段的规则检查输出报错信息
                 {
                     if(!file_exists(data[i].dependency[j]))
                     {
@@ -504,8 +506,8 @@ int main(int argc, char *argv[])
         {
             if(data[i].order_count == 0)
             {
-                    //printf("错误：没有命令来构建目标%s\n", data[i].target);
-                   // exit(1);
+                    printf("错误：没有命令来构建目标%s\n", data[i].target);
+                    exit(1);
             }
             if(data[i].construct_flag==false)//没有必要更新
                 continue;  
@@ -537,17 +539,17 @@ int main(int argc, char *argv[])
 
 int target_update(struct data_t data,struct Hash_t* hash_table)
 {
-    printf("well?\n");
+    //printf("well?\n");
     pid_t pids[7]={0};//最多七个子进程
     pid_t temp=0;
     int j=0;//0-7
     bool full=false;//满载标志
     for(int k=0;k < data.order_count;k++)
     {
-        printf("j=%d\n",j);
+        //printf("j=%d\n",j);
         if(j==7||full)//满载时等一个进程结束才能加一个进去
         {
-            printf("full\n");
+            //printf("full\n");
             j=0;
             temp=wait(NULL);//保存刚才结束的进程的pid
             full=true;
@@ -573,7 +575,7 @@ int target_update(struct data_t data,struct Hash_t* hash_table)
                 {
                     if(pids[l]==temp)
                     {
-                        printf("刚刚结束了进程，pid是%d,索引是%d\n",temp,l);
+                       // printf("刚刚结束了进程，pid是%d,索引是%d\n",temp,l);
                         pids[l]=pid;
                         break;
                     }
@@ -581,7 +583,7 @@ int target_update(struct data_t data,struct Hash_t* hash_table)
             }
             else//没满载，依次填充
             {
-                printf("here\n");
+                //printf("here\n");
                 pids[j]=pid;
                 j++;
             }
@@ -592,7 +594,7 @@ int target_update(struct data_t data,struct Hash_t* hash_table)
     //统一结束进程
     for(int m=0;m<7;m++)
     {
-        printf("\npid=%d,index=%d\n",pids[m],m);
+        //printf("\npid=%d,index=%d\n",pids[m],m);
         waitpid(pids[m], NULL, 0);
     }
 }
@@ -716,7 +718,7 @@ int command_execute(char* command)
     {
         //printf("command_execute:子程序运行中...\n");
         execvp("/bin/sh",div_com);
-        free(div_com);
+        //free(div_com);
         //printf("command_execute:子程序错误\n");
         return -1;
         exit(1);
@@ -739,12 +741,12 @@ int command_execute(char* command)
             //printf("command execute:子程序结束\n");
             if (WIFEXITED(status)) 
             {
-                //printf("命令执行完成，退出状态: %d\n", WEXITSTATUS(status));
+                printf("命令执行完成，退出状态: %d\n", WEXITSTATUS(status));
                 return 1;
             } 
             else 
             {
-                //printf("命令异常终止\n");
+                printf("命令异常终止\n");
                 return -1;
             }
         }   
